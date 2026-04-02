@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>麻雀 · Mahjong Hand Bet</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Cinzel:wght@400;600;900&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+
+  <!-- Styles — loaded in dependency order -->
+  <link rel="stylesheet" href="src/styles/base.css">
+  <link rel="stylesheet" href="src/styles/tiles.css">
+  <link rel="stylesheet" href="src/styles/screens.css">
+</head>
+<body>
+
+  <!-- ============================================================
+       SCREEN: LANDING
+       ============================================================ -->
+  <div id="screen-landing" class="screen">
+    <div class="landing-card ornament-box">
+      <div class="landing-symbol">🀄</div>
+      <h1 class="landing-title">MAHJONG</h1>
+      <p class="landing-subtitle">HAND BETTING GAME</p>
+
+      <button class="btn btn-primary" onclick="App.startNewGame()">
+        ✦ NEW GAME
+      </button>
+
+      <div class="divider">LEADERBOARD</div>
+
+      <div id="leaderboard-display" class="leaderboard-list"></div>
+
+      <button class="btn btn-secondary" style="margin-top:20px" onclick="App.showLeaderboard()">
+        VIEW ALL SCORES
+      </button>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SCREEN: GAME
+       ============================================================ -->
+  <div id="screen-game" class="screen">
+    <div class="game-layout">
+
+      <!-- Header / HUD -->
+      <header class="game-header">
+        <div class="header-logo">🀄</div>
+        <div class="header-stats">
+          <div class="stat-item">
+            <span class="stat-label">Score</span>
+            <span class="stat-value" id="hud-score">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Round</span>
+            <span class="stat-value" id="hud-round">1</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Streak</span>
+            <span class="stat-value" id="hud-streak">0</span>
+          </div>
+        </div>
+        <button class="btn-exit" onclick="App.exitGame()">✕ EXIT</button>
+      </header>
+
+      <!-- Main play area -->
+      <div class="game-main">
+
+        <!-- Center column -->
+        <div class="game-center">
+
+          <!-- Deck counters -->
+          <div class="deck-info">
+            <div class="deck-counter">
+              <span class="deck-counter-label">Draw Pile</span>
+              <span class="deck-counter-value" id="draw-count">0</span>
+              <span class="deck-counter-sub" id="reshuffle-count">Reshuffles: 0/2</span>
+            </div>
+            <div class="deck-counter">
+              <span class="deck-counter-label">Discard Pile</span>
+              <span class="deck-counter-value" id="discard-count">0</span>
+            </div>
+          </div>
+
+          <div class="reshuffle-notice" id="reshuffle-notice">
+            ♻ Deck Reshuffled!
+          </div>
+
+          <!-- Active hand -->
+          <div class="hand-section">
+            <div class="hand-label">Current Hand</div>
+            <div class="hand-tiles" id="current-hand-tiles"></div>
+            <div class="hand-total">
+              <span class="hand-total-label">Total Value</span>
+              <span class="hand-total-value" id="hand-total">—</span>
+            </div>
+            <div class="result-flash" id="result-flash"></div>
+          </div>
+
+        </div>
+
+        <!-- Sidebar: history -->
+        <div class="game-sidebar">
+          <div class="sidebar-panel">
+            <div class="panel-title">Hand History</div>
+            <div id="history-list"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Footer: betting controls -->
+      <footer class="game-footer">
+        <div class="bet-prompt" id="bet-prompt">
+          Will the next hand be<br>higher or lower?
+        </div>
+        <div class="bet-buttons">
+          <button class="btn-bet btn-higher" id="btn-higher" onclick="App.placeBet('higher')">
+            <span class="bet-arrow">▲</span>
+            <span class="bet-label">HIGHER</span>
+          </button>
+          <button class="btn-bet btn-lower" id="btn-lower" onclick="App.placeBet('lower')">
+            <span class="bet-arrow">▼</span>
+            <span class="bet-label">LOWER</span>
+          </button>
+        </div>
+      </footer>
+
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SCREEN: END / SCORE SUMMARY
+       ============================================================ -->
+  <div id="screen-end" class="screen">
+    <div class="ornament-box">
+      <div class="end-title" id="end-title">GAME OVER</div>
+      <div class="end-reason" id="end-reason"></div>
+
+      <div id="end-new-record" class="end-record-badge" style="display:none">
+        ✦ NEW HIGH SCORE ✦
+      </div>
+
+      <div class="end-score-display">
+        <div class="end-score-label">Final Score</div>
+        <div class="end-score-value" id="end-score">0</div>
+      </div>
+
+      <div class="end-stats-row">
+        <div class="end-stat">
+          <span class="end-stat-label">Rounds</span>
+          <span class="end-stat-value" id="end-rounds">0</span>
+        </div>
+        <div class="end-stat">
+          <span class="end-stat-label">Wins</span>
+          <span class="end-stat-value" id="end-wins">0</span>
+        </div>
+        <div class="end-stat">
+          <span class="end-stat-label">Best Streak</span>
+          <span class="end-stat-value" id="end-streak">0</span>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" onclick="App.startNewGame()" style="margin-bottom:10px">
+        ✦ PLAY AGAIN
+      </button>
+      <button class="btn btn-secondary" onclick="App.goHome()">
+        RETURN TO LOBBY
+      </button>
+    </div>
+  </div>
+
+  <!-- Toast notification -->
+  <div class="toast" id="toast"></div>
+
+  <!-- Entry point — ES module, loads the full module graph -->
+  <script type="module" src="src/App.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,1724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mahjong Hand Bet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Cinzel:wght@400;600;900&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* =============================================
+   CSS CUSTOM PROPERTIES — Single source of truth
+   ============================================= */
+:root {
+  --jade:        #2a7a5a;
+  --jade-light:  #3aaa7a;
+  --jade-dark:   #1a5a40;
+  --gold:        #c8a84b;
+  --gold-light:  #e8c86b;
+  --gold-dark:   #a07828;
+  --ivory:       #f5f0e8;
+  --ivory-dark:  #e8e0cc;
+  --red-dragon:  #c0392b;
+  --green-dragon:#27ae60;
+  --white-dragon:#bdc3c7;
+  --wind-blue:   #2980b9;
+  --felt:        #1a3d2a;
+  --felt-light:  #224d34;
+  --felt-dark:   #0f2419;
+  --ink:         #1a1210;
+  --paper:       #faf7f0;
+  --shadow:      rgba(0,0,0,0.4);
+  --tile-w: 62px;
+  --tile-h: 82px;
+  --tile-radius: 6px;
+  --transition: 0.3s cubic-bezier(0.4,0,0.2,1);
+  --spring: 0.5s cubic-bezier(0.34,1.56,0.64,1);
+}
+
+/* =============================================
+   RESET & BASE
+   ============================================= */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  font-family: 'Noto Sans SC', sans-serif;
+  background: var(--felt-dark);
+  color: var(--ivory);
+  user-select: none;
+}
+
+/* =============================================
+   FELT TABLE BACKGROUND
+   ============================================= */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 30%, var(--felt-light) 0%, var(--felt) 40%, var(--felt-dark) 100%);
+  z-index: 0;
+}
+
+/* Subtle fabric texture */
+body::after {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px),
+    repeating-linear-gradient(-45deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+  z-index: 0;
+}
+
+/* =============================================
+   SCREEN SYSTEM
+   ============================================= */
+.screen {
+  position: fixed; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 10;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+.screen.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* =============================================
+   ORNAMENTAL BORDER MIXIN
+   ============================================= */
+.ornament-box {
+  position: relative;
+  border: 2px solid var(--gold);
+  border-radius: 4px;
+  box-shadow:
+    0 0 0 1px rgba(200,168,75,0.2),
+    0 0 0 8px rgba(200,168,75,0.05),
+    0 0 40px rgba(0,0,0,0.6),
+    inset 0 0 60px rgba(0,0,0,0.3);
+}
+.ornament-box::before, .ornament-box::after {
+  content: '◆';
+  position: absolute;
+  color: var(--gold);
+  font-size: 10px;
+  top: -8px;
+}
+.ornament-box::before { left: 12px; }
+.ornament-box::after  { right: 12px; }
+
+/* =============================================
+   LANDING PAGE
+   ============================================= */
+#screen-landing {
+  flex-direction: column;
+  gap: 0;
+}
+
+.landing-card {
+  background: linear-gradient(160deg, rgba(26,61,42,0.98) 0%, rgba(15,36,25,0.99) 100%);
+  padding: 56px 64px 48px;
+  width: min(520px, 92vw);
+  text-align: center;
+  animation: cardRise 0.7s var(--spring) both;
+}
+
+@keyframes cardRise {
+  from { transform: translateY(40px) scale(0.95); opacity: 0; }
+  to   { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.landing-symbol {
+  font-size: 72px;
+  line-height: 1;
+  margin-bottom: 8px;
+  animation: floatSymbol 3s ease-in-out infinite;
+  filter: drop-shadow(0 4px 16px rgba(200,168,75,0.4));
+}
+
+@keyframes floatSymbol {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-8px); }
+}
+
+.landing-title {
+  font-family: 'Cinzel', serif;
+  font-size: 36px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  color: var(--gold-light);
+  text-shadow: 0 2px 20px rgba(200,168,75,0.5);
+  margin-bottom: 4px;
+}
+
+.landing-subtitle {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 13px;
+  color: rgba(245,240,232,0.5);
+  letter-spacing: 0.3em;
+  margin-bottom: 40px;
+}
+
+.divider {
+  display: flex; align-items: center; gap: 12px;
+  margin: 24px 0;
+  color: var(--gold);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  opacity: 0.6;
+}
+.divider::before, .divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+
+.btn {
+  display: block; width: 100%;
+  padding: 16px 32px;
+  border: none; border-radius: 3px;
+  font-family: 'Cinzel', serif;
+  font-size: 14px; font-weight: 600;
+  letter-spacing: 0.15em;
+  cursor: pointer;
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: rgba(255,255,255,0.1);
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+}
+.btn:hover::after { transform: translateX(0); }
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--gold-dark), var(--gold), var(--gold-dark));
+  color: var(--ink);
+  box-shadow: 0 4px 20px rgba(200,168,75,0.3), inset 0 1px 0 rgba(255,255,255,0.2);
+}
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(200,168,75,0.5), inset 0 1px 0 rgba(255,255,255,0.2);
+}
+.btn-primary:active { transform: translateY(0); }
+
+.btn-secondary {
+  background: transparent;
+  color: var(--gold);
+  border: 1px solid rgba(200,168,75,0.4);
+  margin-top: 12px;
+}
+.btn-secondary:hover {
+  background: rgba(200,168,75,0.1);
+  border-color: var(--gold);
+}
+
+/* =============================================
+   LEADERBOARD
+   ============================================= */
+.leaderboard-list {
+  margin-top: 20px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+
+.lb-entry {
+  display: flex; align-items: center;
+  background: rgba(200,168,75,0.07);
+  border: 1px solid rgba(200,168,75,0.15);
+  border-radius: 3px;
+  padding: 10px 16px;
+  gap: 14px;
+  transition: var(--transition);
+  animation: slideIn 0.4s ease both;
+}
+.lb-entry:hover { background: rgba(200,168,75,0.12); }
+
+@keyframes slideIn {
+  from { transform: translateX(-20px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+.lb-entry:nth-child(2) { animation-delay: 0.05s; }
+.lb-entry:nth-child(3) { animation-delay: 0.10s; }
+.lb-entry:nth-child(4) { animation-delay: 0.15s; }
+.lb-entry:nth-child(5) { animation-delay: 0.20s; }
+
+.lb-rank {
+  font-family: 'Cinzel', serif;
+  font-size: 18px; font-weight: 900;
+  color: var(--gold); min-width: 28px;
+}
+.lb-rank.first  { color: #FFD700; text-shadow: 0 0 12px rgba(255,215,0,0.6); }
+.lb-rank.second { color: #C0C0C0; }
+.lb-rank.third  { color: #CD7F32; }
+
+.lb-name {
+  flex: 1;
+  font-family: 'Noto Serif SC', serif;
+  font-size: 14px;
+  color: var(--ivory);
+}
+
+.lb-score {
+  font-family: 'Cinzel', serif;
+  font-size: 16px; font-weight: 600;
+  color: var(--gold-light);
+}
+
+.lb-empty {
+  text-align: center;
+  color: rgba(245,240,232,0.3);
+  font-size: 13px;
+  padding: 20px;
+  font-style: italic;
+}
+
+/* =============================================
+   GAME SCREEN
+   ============================================= */
+#screen-game {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  padding: 0;
+  overflow: hidden;
+}
+
+.game-layout {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  height: 100vh;
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+  gap: 0;
+  padding: 16px;
+}
+
+/* --- HEADER --- */
+.game-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(200,168,75,0.2);
+  border-radius: 6px 6px 0 0;
+  margin-bottom: 2px;
+}
+
+.header-logo {
+  font-family: 'Cinzel', serif;
+  font-size: 16px; font-weight: 900;
+  color: var(--gold);
+  letter-spacing: 0.1em;
+}
+
+.header-stats {
+  display: flex; gap: 24px;
+}
+
+.stat-item {
+  display: flex; flex-direction: column; align-items: center;
+}
+.stat-label {
+  font-size: 9px; letter-spacing: 0.2em;
+  color: rgba(245,240,232,0.4);
+  text-transform: uppercase;
+}
+.stat-value {
+  font-family: 'Cinzel', serif;
+  font-size: 18px; font-weight: 600;
+  color: var(--gold-light);
+  transition: var(--transition);
+}
+.stat-value.pulse {
+  animation: statPulse 0.4s ease;
+}
+@keyframes statPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.3); color: var(--gold-light); }
+}
+
+.btn-exit {
+  background: none;
+  border: 1px solid rgba(200,168,75,0.3);
+  color: rgba(245,240,232,0.5);
+  padding: 6px 14px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 11px; letter-spacing: 0.1em;
+  font-family: 'Cinzel', serif;
+  transition: var(--transition);
+}
+.btn-exit:hover {
+  color: var(--gold); border-color: var(--gold);
+  background: rgba(200,168,75,0.1);
+}
+
+/* --- MAIN GAME AREA --- */
+.game-main {
+  display: grid;
+  grid-template-columns: 1fr 220px;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.game-center {
+  display: flex; flex-direction: column;
+  background: rgba(0,0,0,0.2);
+  border: 1px solid rgba(200,168,75,0.15);
+  padding: 20px;
+  gap: 16px;
+  overflow: hidden;
+}
+
+.game-sidebar {
+  display: flex; flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+
+/* --- DECK COUNTERS --- */
+.deck-info {
+  display: flex; gap: 10px;
+  justify-content: center;
+}
+
+.deck-counter {
+  display: flex; flex-direction: column; align-items: center;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(200,168,75,0.2);
+  border-radius: 4px;
+  padding: 8px 20px;
+  min-width: 100px;
+}
+.deck-counter-label {
+  font-size: 9px; letter-spacing: 0.25em;
+  color: rgba(245,240,232,0.4);
+  text-transform: uppercase;
+}
+.deck-counter-value {
+  font-family: 'Cinzel', serif;
+  font-size: 24px; font-weight: 700;
+  color: var(--ivory);
+}
+.deck-counter-sub {
+  font-size: 9px;
+  color: rgba(245,240,232,0.3);
+}
+
+/* --- CURRENT HAND --- */
+.hand-section {
+  flex: 1;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 12px;
+}
+
+.hand-label {
+  font-size: 10px; letter-spacing: 0.3em;
+  color: rgba(245,240,232,0.4);
+  text-transform: uppercase;
+}
+
+.hand-tiles {
+  display: flex; gap: 8px; justify-content: center;
+  flex-wrap: wrap;
+  min-height: var(--tile-h);
+}
+
+.hand-total {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+.hand-total-label {
+  font-size: 10px; letter-spacing: 0.2em;
+  color: rgba(245,240,232,0.4);
+}
+.hand-total-value {
+  font-family: 'Cinzel', serif;
+  font-size: 42px; font-weight: 900;
+  line-height: 1;
+  color: var(--gold-light);
+  text-shadow: 0 0 30px rgba(200,168,75,0.4);
+  transition: var(--transition);
+}
+
+/* --- RESULT FLASH --- */
+.result-flash {
+  padding: 8px 24px;
+  border-radius: 3px;
+  font-family: 'Cinzel', serif;
+  font-size: 15px; font-weight: 700;
+  letter-spacing: 0.1em;
+  opacity: 0;
+  transform: scale(0.8);
+  transition: all 0.3s var(--spring);
+  pointer-events: none;
+}
+.result-flash.show {
+  opacity: 1; transform: scale(1);
+}
+.result-flash.win {
+  background: rgba(39,174,96,0.2);
+  border: 1px solid var(--green-dragon);
+  color: #4dd886;
+}
+.result-flash.lose {
+  background: rgba(192,57,43,0.2);
+  border: 1px solid var(--red-dragon);
+  color: #e74c3c;
+}
+.result-flash.push {
+  background: rgba(200,168,75,0.2);
+  border: 1px solid var(--gold);
+  color: var(--gold-light);
+}
+
+/* =============================================
+   MAHJONG TILE COMPONENT
+   ============================================= */
+.tile {
+  width: var(--tile-w);
+  height: var(--tile-h);
+  background: linear-gradient(145deg, #faf8f0, #ede8d8);
+  border-radius: var(--tile-radius);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  position: relative;
+  cursor: default;
+  box-shadow:
+    2px 4px 0 #b0a878,
+    0 6px 16px rgba(0,0,0,0.4),
+    inset 0 1px 0 rgba(255,255,255,0.8);
+  transition: transform 0.3s var(--spring), box-shadow 0.3s ease;
+  animation: tileReveal 0.5s var(--spring) both;
+  flex-shrink: 0;
+}
+
+@keyframes tileReveal {
+  from { transform: translateY(-30px) rotateX(20deg); opacity: 0; }
+  to   { transform: translateY(0) rotateX(0); opacity: 1; }
+}
+
+.tile:nth-child(1) { animation-delay: 0.05s; }
+.tile:nth-child(2) { animation-delay: 0.10s; }
+.tile:nth-child(3) { animation-delay: 0.15s; }
+.tile:nth-child(4) { animation-delay: 0.20s; }
+.tile:nth-child(5) { animation-delay: 0.25s; }
+
+.tile-symbol {
+  font-size: 32px; line-height: 1;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.2));
+}
+
+.tile-label {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 10px;
+  color: #555;
+  margin-top: 2px;
+  font-weight: 600;
+}
+
+.tile-value {
+  position: absolute; bottom: 4px; right: 6px;
+  font-family: 'Cinzel', serif;
+  font-size: 11px; font-weight: 700;
+  color: rgba(0,0,0,0.35);
+}
+
+/* Tile suit colors */
+.tile.suit-man  .tile-symbol { color: #c0392b; }
+.tile.suit-pin  .tile-symbol { color: #2980b9; }
+.tile.suit-sou  .tile-symbol { color: #27ae60; }
+.tile.suit-dragon-red   .tile-symbol { color: #c0392b; }
+.tile.suit-dragon-green .tile-symbol { color: #27ae60; }
+.tile.suit-dragon-white .tile-symbol { color: #7f8c8d; }
+.tile.suit-wind .tile-symbol { color: #2c3e50; }
+
+/* Small tile variant */
+.tile.small {
+  --tile-w: 38px;
+  --tile-h: 50px;
+  width: var(--tile-w);
+  height: var(--tile-h);
+  box-shadow: 1px 2px 0 #b0a878, 0 4px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.8);
+}
+.tile.small .tile-symbol { font-size: 18px; }
+.tile.small .tile-label  { font-size: 7px; }
+.tile.small .tile-value  { font-size: 8px; }
+
+/* Tile back (for draw pile visual) */
+.tile.back {
+  background: linear-gradient(145deg, var(--jade), var(--jade-dark));
+  box-shadow: 2px 4px 0 #1a4030, 0 6px 16px rgba(0,0,0,0.4);
+}
+.tile.back .tile-back-pattern {
+  width: 80%; height: 80%;
+  border: 1px solid rgba(200,168,75,0.4);
+  border-radius: 2px;
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(200,168,75,0.6);
+  font-size: 24px;
+}
+
+/* =============================================
+   HISTORY PANEL (Sidebar)
+   ============================================= */
+.sidebar-panel {
+  background: rgba(0,0,0,0.25);
+  border: 1px solid rgba(200,168,75,0.15);
+  padding: 14px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(200,168,75,0.3) transparent;
+}
+.sidebar-panel::-webkit-scrollbar { width: 4px; }
+.sidebar-panel::-webkit-scrollbar-thumb { background: rgba(200,168,75,0.3); border-radius: 2px; }
+
+.panel-title {
+  font-family: 'Cinzel', serif;
+  font-size: 10px; letter-spacing: 0.25em;
+  color: rgba(200,168,75,0.6);
+  text-transform: uppercase;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.history-hand {
+  background: rgba(0,0,0,0.2);
+  border: 1px solid rgba(200,168,75,0.1);
+  border-radius: 3px;
+  padding: 8px;
+  margin-bottom: 8px;
+  animation: historySlide 0.4s var(--spring);
+}
+
+@keyframes historySlide {
+  from { transform: translateX(20px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+
+.history-tiles {
+  display: flex; gap: 3px; flex-wrap: wrap; justify-content: center;
+  margin-bottom: 6px;
+}
+
+.history-meta {
+  display: flex; justify-content: space-between; align-items: center;
+}
+.history-total {
+  font-family: 'Cinzel', serif;
+  font-size: 13px; font-weight: 700;
+  color: var(--gold);
+}
+.history-result {
+  font-size: 10px; font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 2px;
+}
+.history-result.win  { background: rgba(39,174,96,0.2); color: #4dd886; }
+.history-result.lose { background: rgba(192,57,43,0.2); color: #e74c3c; }
+.history-result.push { background: rgba(200,168,75,0.2); color: var(--gold); }
+
+/* =============================================
+   BETTING CONTROLS
+   ============================================= */
+.game-footer {
+  display: flex; align-items: center; justify-content: center;
+  gap: 16px;
+  padding: 14px 16px;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(200,168,75,0.2);
+  border-radius: 0 0 6px 6px;
+  margin-top: 2px;
+}
+
+.bet-prompt {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 12px;
+  color: rgba(245,240,232,0.5);
+  letter-spacing: 0.1em;
+  text-align: center;
+}
+
+.bet-buttons {
+  display: flex; gap: 12px;
+}
+
+.btn-bet {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 12px 32px;
+  border: none; border-radius: 4px;
+  cursor: pointer;
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+  font-family: 'Cinzel', serif;
+  gap: 2px;
+}
+.btn-bet:disabled {
+  opacity: 0.4; cursor: not-allowed;
+}
+.btn-bet:not(:disabled):hover {
+  transform: translateY(-3px);
+}
+.btn-bet:not(:disabled):active {
+  transform: translateY(0);
+}
+
+.btn-higher {
+  background: linear-gradient(135deg, #1a5a40, var(--jade), #1a5a40);
+  color: var(--ivory);
+  box-shadow: 0 4px 20px rgba(42,122,90,0.4), inset 0 1px 0 rgba(255,255,255,0.15);
+}
+.btn-higher:not(:disabled):hover {
+  box-shadow: 0 8px 30px rgba(42,122,90,0.6), inset 0 1px 0 rgba(255,255,255,0.15);
+}
+
+.btn-lower {
+  background: linear-gradient(135deg, #6a1a1a, var(--red-dragon), #6a1a1a);
+  color: var(--ivory);
+  box-shadow: 0 4px 20px rgba(192,57,43,0.4), inset 0 1px 0 rgba(255,255,255,0.15);
+}
+.btn-lower:not(:disabled):hover {
+  box-shadow: 0 8px 30px rgba(192,57,43,0.6), inset 0 1px 0 rgba(255,255,255,0.15);
+}
+
+.bet-arrow {
+  font-size: 22px;
+  line-height: 1;
+}
+.bet-label {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  font-weight: 600;
+}
+
+/* Reshuffling notice */
+.reshuffle-notice {
+  padding: 6px 16px;
+  background: rgba(200,168,75,0.15);
+  border: 1px solid rgba(200,168,75,0.3);
+  border-radius: 3px;
+  font-size: 11px;
+  color: var(--gold);
+  text-align: center;
+  letter-spacing: 0.1em;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.reshuffle-notice.show { opacity: 1; }
+
+/* =============================================
+   END SCREEN
+   ============================================= */
+#screen-end .ornament-box {
+  background: linear-gradient(160deg, rgba(26,61,42,0.98), rgba(15,36,25,0.99));
+  padding: 48px 56px 40px;
+  width: min(480px, 92vw);
+  text-align: center;
+  animation: cardRise 0.6s var(--spring) both;
+}
+
+.end-title {
+  font-family: 'Cinzel', serif;
+  font-size: 28px; font-weight: 900;
+  color: var(--gold-light);
+  letter-spacing: 0.1em;
+  margin-bottom: 8px;
+}
+
+.end-reason {
+  font-size: 13px;
+  color: rgba(245,240,232,0.5);
+  margin-bottom: 28px;
+  letter-spacing: 0.05em;
+}
+
+.end-score-display {
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(200,168,75,0.2);
+  border-radius: 4px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.end-score-label {
+  font-size: 10px; letter-spacing: 0.3em;
+  color: rgba(245,240,232,0.4);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.end-score-value {
+  font-family: 'Cinzel', serif;
+  font-size: 64px; font-weight: 900;
+  color: var(--gold-light);
+  text-shadow: 0 0 40px rgba(200,168,75,0.5);
+  animation: scorePop 0.6s var(--spring) 0.3s both;
+}
+
+@keyframes scorePop {
+  from { transform: scale(0); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+.end-record-badge {
+  display: inline-block;
+  background: rgba(200,168,75,0.2);
+  border: 1px solid var(--gold);
+  border-radius: 2px;
+  padding: 4px 12px;
+  font-family: 'Cinzel', serif;
+  font-size: 11px; font-weight: 600;
+  color: var(--gold-light);
+  letter-spacing: 0.15em;
+  margin-bottom: 8px;
+  animation: glow 1.5s ease-in-out infinite alternate;
+}
+@keyframes glow {
+  from { box-shadow: 0 0 8px rgba(200,168,75,0.3); }
+  to   { box-shadow: 0 0 20px rgba(200,168,75,0.7); }
+}
+
+.end-stats-row {
+  display: flex; gap: 12px; margin-bottom: 24px;
+}
+
+.end-stat {
+  flex: 1;
+  background: rgba(0,0,0,0.2);
+  border: 1px solid rgba(200,168,75,0.1);
+  border-radius: 3px;
+  padding: 10px;
+  text-align: center;
+}
+.end-stat-label {
+  font-size: 9px; letter-spacing: 0.2em;
+  color: rgba(245,240,232,0.4);
+  text-transform: uppercase;
+  display: block; margin-bottom: 4px;
+}
+.end-stat-value {
+  font-family: 'Cinzel', serif;
+  font-size: 18px; font-weight: 600;
+  color: var(--ivory);
+}
+
+/* =============================================
+   NOTIFICATION TOAST
+   ============================================= */
+.toast {
+  position: fixed;
+  top: 20px; left: 50%; transform: translateX(-50%) translateY(-80px);
+  background: rgba(0,0,0,0.85);
+  border: 1px solid var(--gold);
+  border-radius: 3px;
+  padding: 10px 24px;
+  font-family: 'Cinzel', serif;
+  font-size: 13px;
+  color: var(--gold-light);
+  letter-spacing: 0.1em;
+  z-index: 100;
+  transition: transform 0.4s var(--spring);
+  backdrop-filter: blur(10px);
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+/* =============================================
+   RESPONSIVE
+   ============================================= */
+@media (max-width: 640px) {
+  .game-main { grid-template-columns: 1fr; }
+  .game-sidebar { display: none; }
+  .game-layout { padding: 8px; }
+  :root { --tile-w: 50px; --tile-h: 66px; }
+  .landing-card { padding: 40px 28px 32px; }
+  .landing-title { font-size: 28px; }
+  .hand-total-value { font-size: 32px; }
+  .btn-bet { padding: 10px 20px; }
+}
+
+/* =============================================
+   UTILITY ANIMATIONS
+   ============================================= */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%       { transform: translateX(-8px); }
+  40%       { transform: translateX(8px); }
+  60%       { transform: translateX(-5px); }
+  80%       { transform: translateX(5px); }
+}
+
+.shake { animation: shake 0.4s ease; }
+
+@keyframes bounceIn {
+  from { transform: scale(0.5); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     SCREEN: LANDING
+     ============================================================ -->
+<div id="screen-landing" class="screen active">
+  <div class="landing-card ornament-box">
+    <div class="landing-symbol">🀄</div>
+    <h1 class="landing-title">MAHJONG</h1>
+    <p class="landing-subtitle">HAND BETTING GAME</p>
+
+    <button class="btn btn-primary" onclick="App.startNewGame()">
+      ✦ NEW GAME
+    </button>
+
+    <div class="divider">LEADERBOARD</div>
+
+    <div id="leaderboard-display" class="leaderboard-list"></div>
+
+    <button class="btn btn-secondary" style="margin-top:20px" onclick="App.showLeaderboard()">
+      VIEW ALL SCORES
+    </button>
+  </div>
+</div>
+
+<!-- ============================================================
+     SCREEN: GAME
+     ============================================================ -->
+<div id="screen-game" class="screen">
+  <div class="game-layout">
+
+    <!-- HEADER -->
+    <header class="game-header">
+      <div class="header-logo">🀄</div>
+      <div class="header-stats">
+        <div class="stat-item">
+          <span class="stat-label">Score</span>
+          <span class="stat-value" id="hud-score">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Round</span>
+          <span class="stat-value" id="hud-round">1</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Streak</span>
+          <span class="stat-value" id="hud-streak">0</span>
+        </div>
+      </div>
+      <button class="btn-exit" onclick="App.exitGame()">✕ EXIT</button>
+    </header>
+
+    <!-- MAIN AREA -->
+    <div class="game-main">
+
+      <!-- CENTER PLAY AREA -->
+      <div class="game-center">
+
+        <!-- Deck info row -->
+        <div class="deck-info">
+          <div class="deck-counter">
+            <span class="deck-counter-label">Draw Pile</span>
+            <span class="deck-counter-value" id="draw-count">0</span>
+            <span class="deck-counter-sub" id="reshuffle-count">Reshuffles: 0/2</span>
+          </div>
+          <div class="deck-counter">
+            <span class="deck-counter-label">Discard Pile</span>
+            <span class="deck-counter-value" id="discard-count">0</span>
+          </div>
+        </div>
+
+        <div class="reshuffle-notice" id="reshuffle-notice">
+          ♻ Deck Reshuffled!
+        </div>
+
+        <!-- Current hand -->
+        <div class="hand-section">
+          <div class="hand-label">Current Hand</div>
+          <div class="hand-tiles" id="current-hand-tiles"></div>
+          <div class="hand-total">
+            <span class="hand-total-label">Total Value</span>
+            <span class="hand-total-value" id="hand-total">—</span>
+          </div>
+          <div class="result-flash" id="result-flash"></div>
+        </div>
+
+      </div>
+
+      <!-- SIDEBAR: History -->
+      <div class="game-sidebar">
+        <div class="sidebar-panel" style="flex:1">
+          <div class="panel-title">Hand History</div>
+          <div id="history-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FOOTER: Betting -->
+    <footer class="game-footer">
+      <div class="bet-prompt" id="bet-prompt">
+        Will the next hand be<br>higher or lower?
+      </div>
+      <div class="bet-buttons">
+        <button class="btn-bet btn-higher" id="btn-higher" onclick="App.placeBet('higher')">
+          <span class="bet-arrow">▲</span>
+          <span class="bet-label">HIGHER</span>
+        </button>
+        <button class="btn-bet btn-lower" id="btn-lower" onclick="App.placeBet('lower')">
+          <span class="bet-arrow">▼</span>
+          <span class="bet-label">LOWER</span>
+        </button>
+      </div>
+    </footer>
+
+  </div>
+</div>
+
+<!-- ============================================================
+     SCREEN: END
+     ============================================================ -->
+<div id="screen-end" class="screen">
+  <div class="ornament-box">
+    <div class="end-title" id="end-title">GAME OVER</div>
+    <div class="end-reason" id="end-reason"></div>
+
+    <div id="end-new-record" class="end-record-badge" style="display:none">
+      ✦ NEW HIGH SCORE ✦
+    </div>
+
+    <div class="end-score-display">
+      <div class="end-score-label">Final Score</div>
+      <div class="end-score-value" id="end-score">0</div>
+    </div>
+
+    <div class="end-stats-row">
+      <div class="end-stat">
+        <span class="end-stat-label">Rounds</span>
+        <span class="end-stat-value" id="end-rounds">0</span>
+      </div>
+      <div class="end-stat">
+        <span class="end-stat-label">Wins</span>
+        <span class="end-stat-value" id="end-wins">0</span>
+      </div>
+      <div class="end-stat">
+        <span class="end-stat-label">Best Streak</span>
+        <span class="end-stat-value" id="end-streak">0</span>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" onclick="App.startNewGame()" style="margin-bottom:10px">
+      ✦ PLAY AGAIN
+    </button>
+    <button class="btn btn-secondary" onclick="App.goHome()">
+      RETURN TO LOBBY
+    </button>
+  </div>
+</div>
+
+<!-- Toast notification -->
+<div class="toast" id="toast"></div>
+
+<!-- ============================================================
+     JAVASCRIPT — Modular Architecture
+     ============================================================ -->
+<script>
+'use strict';
+
+/* ===============================================================
+   MODULE: TileDefinitions
+   Defines all tile types and their properties
+   =============================================================== */
+const TileDefinitions = (() => {
+
+  // Number suit config
+  const NUMBER_SUITS = [
+    { id: 'man',  name: '萬', symbol: '🀇', label: '萬', chars: ['🀇','🀈','🀉','🀊','🀋','🀌','🀍','🀎','🀏'] },
+    { id: 'pin',  name: '餅', symbol: '🀙', label: '餅', chars: ['🀙','🀚','🀛','🀜','🀝','🀞','🀟','🀠','🀡'] },
+    { id: 'sou',  name: '索', symbol: '🀐', label: '索', chars: ['🀐','🀑','🀒','🀓','🀔','🀕','🀖','🀗','🀘'] },
+  ];
+
+  const SPECIAL_TILES = [
+    { id: 'dragon-red',   suit: 'dragon-red',   symbol: '🀄', label: '中',  baseValue: 5, isSpecial: true },
+    { id: 'dragon-green', suit: 'dragon-green',  symbol: '🀅', label: '發',  baseValue: 5, isSpecial: true },
+    { id: 'dragon-white', suit: 'dragon-white',  symbol: '🀆', label: '白',  baseValue: 5, isSpecial: true },
+    { id: 'wind-east',    suit: 'wind',          symbol: '🀀', label: '東',  baseValue: 5, isSpecial: true },
+    { id: 'wind-south',   suit: 'wind',          symbol: '🀁', label: '南',  baseValue: 5, isSpecial: true },
+    { id: 'wind-west',    suit: 'wind',          symbol: '🀂', label: '西',  baseValue: 5, isSpecial: true },
+    { id: 'wind-north',   suit: 'wind',          symbol: '🀃', label: '北',  baseValue: 5, isSpecial: true },
+  ];
+
+  // Build complete tile template set (one copy of each unique tile)
+  function buildDeckTemplate() {
+    const tiles = [];
+
+    NUMBER_SUITS.forEach(suit => {
+      for (let n = 1; n <= 9; n++) {
+        tiles.push({
+          id:        `${suit.id}-${n}`,
+          suit:      `suit-${suit.id}`,
+          symbol:    suit.chars[n - 1],
+          label:     `${n}${suit.label}`,
+          baseValue: n,
+          isSpecial: false,
+        });
+      }
+    });
+
+    SPECIAL_TILES.forEach(t => tiles.push({ ...t, suit: `suit-${t.suit}` }));
+
+    return tiles;
+  }
+
+  // One deck = 4 copies of each tile (standard mahjong has 4 of each)
+  function buildFullDeck() {
+    const template = buildDeckTemplate();
+    const deck = [];
+    template.forEach(tile => {
+      for (let i = 0; i < 4; i++) {
+        deck.push({ ...tile, instanceId: `${tile.id}-${i}` });
+      }
+    });
+    return deck;
+  }
+
+  return { buildFullDeck, buildDeckTemplate, SPECIAL_TILES };
+})();
+
+
+/* ===============================================================
+   MODULE: DeckManager
+   Handles deck state, shuffling, drawing, reshuffling
+   =============================================================== */
+class DeckManager {
+  constructor() {
+    this.drawPile    = [];
+    this.discardPile = [];
+    this.reshuffleCount = 0;
+    this.MAX_RESHUFFLES = 2;
+  }
+
+  /** Initialize a fresh deck */
+  init() {
+    this.drawPile    = this._shuffle(TileDefinitions.buildFullDeck());
+    this.discardPile = [];
+    this.reshuffleCount = 0;
+  }
+
+  /** Draw n tiles from the draw pile */
+  draw(n = 1) {
+    const tiles = [];
+    for (let i = 0; i < n; i++) {
+      if (this.drawPile.length === 0) {
+        const reshuffled = this._reshuffle();
+        if (!reshuffled) break; // game over condition handled outside
+      }
+      if (this.drawPile.length > 0) {
+        tiles.push(this.drawPile.pop());
+      }
+    }
+    return tiles;
+  }
+
+  /** Send tiles to discard pile */
+  discard(tiles) {
+    this.discardPile.push(...tiles);
+  }
+
+  /** Reshuffle: combine discard + fresh deck, shuffle into draw */
+  _reshuffle() {
+    if (this.reshuffleCount >= this.MAX_RESHUFFLES) return false;
+    const freshDeck = TileDefinitions.buildFullDeck();
+    this.drawPile = this._shuffle([...this.discardPile, ...freshDeck]);
+    this.discardPile = [];
+    this.reshuffleCount++;
+    return true;
+  }
+
+  needsReshuffle() {
+    return this.drawPile.length === 0 && this.reshuffleCount < this.MAX_RESHUFFLES;
+  }
+
+  isExhausted() {
+    return this.drawPile.length === 0 && this.reshuffleCount >= this.MAX_RESHUFFLES;
+  }
+
+  _shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  get drawCount()    { return this.drawPile.length; }
+  get discardCount() { return this.discardPile.length; }
+  get reshufflesLeft() { return this.MAX_RESHUFFLES - this.reshuffleCount; }
+}
+
+
+/* ===============================================================
+   MODULE: ValueManager
+   Tracks dynamic values for special tiles
+   =============================================================== */
+class ValueManager {
+  constructor() {
+    this.specialValues = {};  // tileId -> current value
+  }
+
+  init() {
+    // Reset all special tile values to base (5)
+    TileDefinitions.SPECIAL_TILES.forEach(t => {
+      this.specialValues[t.id] = t.baseValue;
+    });
+  }
+
+  /** Get the current value of a tile (resolves dynamic values) */
+  getValue(tile) {
+    if (tile.isSpecial) {
+      return this.specialValues[tile.id] ?? tile.baseValue;
+    }
+    return tile.baseValue;
+  }
+
+  /** Adjust special tile values after a hand result */
+  adjustAfterHand(tiles, won) {
+    const delta = won ? 1 : -1;
+    const specialInHand = tiles.filter(t => t.isSpecial);
+    const changed = [];
+
+    specialInHand.forEach(tile => {
+      const oldVal = this.specialValues[tile.id];
+      const newVal = Math.max(0, Math.min(10, oldVal + delta));
+      this.specialValues[tile.id] = newVal;
+      if (newVal !== oldVal) {
+        changed.push({ tile, oldVal, newVal });
+      }
+    });
+
+    return changed;
+  }
+
+  /** Check if any special tile has hit a game-ending value (0 or 10) */
+  checkGameOver() {
+    for (const [tileId, val] of Object.entries(this.specialValues)) {
+      if (val === 0 || val === 10) {
+        const tile = TileDefinitions.SPECIAL_TILES.find(t => t.id === tileId);
+        return { triggered: true, tile, value: val };
+      }
+    }
+    return { triggered: false };
+  }
+
+  getValueFor(tileId) {
+    return this.specialValues[tileId] ?? 5;
+  }
+}
+
+
+/* ===============================================================
+   MODULE: GameEngine
+   Core game state machine
+   =============================================================== */
+class GameEngine {
+  constructor() {
+    this.deck         = new DeckManager();
+    this.values       = new ValueManager();
+    this.currentHand  = [];
+    this.handHistory  = [];
+    this.score        = 0;
+    this.round        = 0;
+    this.wins         = 0;
+    this.losses       = 0;
+    this.currentStreak = 0;
+    this.bestStreak   = 0;
+    this.lastHandTotal = null;
+    this.isOver       = false;
+    this.overReason   = '';
+    this.lastReshuffled = false;
+  }
+
+  /** Start a fresh game */
+  newGame() {
+    this.deck.init();
+    this.values.init();
+    this.currentHand  = [];
+    this.handHistory  = [];
+    this.score        = 0;
+    this.round        = 0;
+    this.wins         = 0;
+    this.losses       = 0;
+    this.currentStreak = 0;
+    this.bestStreak   = 0;
+    this.lastHandTotal = null;
+    this.isOver       = false;
+    this.overReason   = '';
+    this.lastReshuffled = false;
+
+    // Deal first hand
+    this._dealHand();
+  }
+
+  /** Deal a new hand of 5 tiles */
+  _dealHand() {
+    this.lastReshuffled = false;
+
+    // Check if reshuffle needed
+    if (this.deck.drawPile.length < 5) {
+      if (this.deck.reshuffleCount >= this.deck.MAX_RESHUFFLES) {
+        this.isOver = true;
+        this.overReason = `Draw pile exhausted after ${this.deck.MAX_RESHUFFLES + 1} uses`;
+        return;
+      }
+      this.deck._reshuffle();
+      this.lastReshuffled = true;
+    }
+
+    // Discard previous hand
+    if (this.currentHand.length > 0) {
+      this.deck.discard(this.currentHand);
+    }
+
+    this.currentHand = this.deck.draw(5);
+    this.round++;
+  }
+
+  /** Compute total value of a hand */
+  handTotal(hand = this.currentHand) {
+    return hand.reduce((sum, tile) => sum + this.values.getValue(tile), 0);
+  }
+
+  /**
+   * Place a bet ('higher' | 'lower')
+   * Returns a result object describing what happened
+   */
+  placeBet(direction) {
+    if (this.isOver) return null;
+
+    const prevTotal  = this.lastHandTotal;
+    const thisTotal  = this.handTotal();
+    const handCopy   = [...this.currentHand];
+
+    let result = 'push';
+    if (prevTotal !== null) {
+      if (direction === 'higher' && thisTotal > prevTotal)  result = 'win';
+      if (direction === 'higher' && thisTotal < prevTotal)  result = 'lose';
+      if (direction === 'lower'  && thisTotal < prevTotal)  result = 'win';
+      if (direction === 'lower'  && thisTotal > prevTotal)  result = 'lose';
+      // equal = push (no change)
+    }
+
+    // Score: wins earn points, streak bonus
+    const won = result === 'win';
+    const lost = result === 'lose';
+
+    if (won) {
+      this.wins++;
+      this.currentStreak++;
+      this.bestStreak = Math.max(this.bestStreak, this.currentStreak);
+      const streakBonus = Math.floor(this.currentStreak / 3) * 5;
+      this.score += 10 + thisTotal + streakBonus;
+    } else if (lost) {
+      this.losses++;
+      this.currentStreak = 0;
+    }
+
+    // Adjust special tile values
+    const changed = this.values.adjustAfterHand(handCopy, won);
+
+    // Check game-over: tile hit boundary
+    const tileCheck = this.values.checkGameOver();
+    if (tileCheck.triggered) {
+      this.isOver   = true;
+      this.overReason = `${tileCheck.tile.label} tile value reached ${tileCheck.value}`;
+    }
+
+    // Store history
+    this.handHistory.unshift({
+      tiles:      handCopy,
+      total:      thisTotal,
+      result,
+      direction,
+      scoreGained: won ? 10 + thisTotal : 0,
+      round:      this.round,
+    });
+
+    this.lastHandTotal = thisTotal;
+
+    // Deal next hand (unless game is over)
+    if (!this.isOver) {
+      this._dealHand();
+      // Check exhausted after deal
+      if (this.isOver) {
+        // already set inside _dealHand
+      }
+    }
+
+    return { result, prevTotal, thisTotal, changed };
+  }
+
+  getState() {
+    return {
+      currentHand:   this.currentHand,
+      handTotal:     this.handTotal(),
+      handHistory:   this.handHistory,
+      score:         this.score,
+      round:         this.round,
+      wins:          this.wins,
+      losses:        this.losses,
+      currentStreak: this.currentStreak,
+      bestStreak:    this.bestStreak,
+      drawCount:     this.deck.drawCount,
+      discardCount:  this.deck.discardCount,
+      reshufflesDone:this.deck.reshuffleCount,
+      maxReshuffles: this.deck.MAX_RESHUFFLES,
+      isOver:        this.isOver,
+      overReason:    this.overReason,
+      lastReshuffled:this.lastReshuffled,
+      lastHandTotal: this.lastHandTotal,
+    };
+  }
+}
+
+
+/* ===============================================================
+   MODULE: Leaderboard
+   Persists top scores using localStorage
+   =============================================================== */
+const Leaderboard = (() => {
+  const KEY      = 'mahjong_lb_v1';
+  const MAX_ENTRIES = 10;
+
+  function load() {
+    try {
+      return JSON.parse(localStorage.getItem(KEY)) || [];
+    } catch { return []; }
+  }
+
+  function save(entries) {
+    try { localStorage.setItem(KEY, JSON.stringify(entries)); } catch {}
+  }
+
+  function addScore(score, wins, rounds, bestStreak) {
+    const entries = load();
+    const entry = {
+      score, wins, rounds, bestStreak,
+      date: new Date().toISOString(),
+    };
+    entries.push(entry);
+    entries.sort((a, b) => b.score - a.score);
+    const trimmed = entries.slice(0, MAX_ENTRIES);
+    save(trimmed);
+    const rank = trimmed.findIndex(e => e === entry) + 1;
+    return { rank, isTop: rank <= 5 };
+  }
+
+  function getTop(n = 5) {
+    return load().slice(0, n);
+  }
+
+  return { addScore, getTop };
+})();
+
+
+/* ===============================================================
+   MODULE: TileRenderer
+   Creates tile DOM elements
+   =============================================================== */
+const TileRenderer = (() => {
+
+  function createTile(tile, valueManager, small = false) {
+    const el = document.createElement('div');
+    el.className = `tile ${tile.suit}${small ? ' small' : ''}`;
+    el.setAttribute('data-tile-id', tile.id);
+
+    const value = valueManager ? valueManager.getValue(tile) : tile.baseValue;
+
+    el.innerHTML = `
+      <span class="tile-symbol">${tile.symbol}</span>
+      <span class="tile-label">${tile.label}</span>
+      <span class="tile-value">${value}</span>
+    `;
+
+    return el;
+  }
+
+  function createBackTile() {
+    const el = document.createElement('div');
+    el.className = 'tile back';
+    el.innerHTML = `<div class="tile-back-pattern">🀄</div>`;
+    return el;
+  }
+
+  function renderHand(container, tiles, valueManager, small = false) {
+    container.innerHTML = '';
+    tiles.forEach((tile, i) => {
+      const el = createTile(tile, valueManager, small);
+      el.style.animationDelay = `${i * 0.06}s`;
+      container.appendChild(el);
+    });
+  }
+
+  return { createTile, createBackTile, renderHand };
+})();
+
+
+/* ===============================================================
+   MODULE: UI
+   All DOM manipulation and screen transitions
+   =============================================================== */
+const UI = (() => {
+  const screens = {
+    landing: document.getElementById('screen-landing'),
+    game:    document.getElementById('screen-game'),
+    end:     document.getElementById('screen-end'),
+  };
+
+  function showScreen(name) {
+    Object.values(screens).forEach(s => s.classList.remove('active'));
+    if (screens[name]) screens[name].classList.add('active');
+  }
+
+  function updateHUD(state) {
+    setText('hud-score',  state.score);
+    setText('hud-round',  state.round);
+    setText('hud-streak', state.currentStreak + (state.currentStreak >= 3 ? '🔥' : ''));
+    setText('draw-count',    state.drawCount);
+    setText('discard-count', state.discardCount);
+    setText('reshuffle-count', `Reshuffles: ${state.reshufflesDone}/${state.maxReshuffles}`);
+  }
+
+  function renderCurrentHand(tiles, valueManager) {
+    const container = document.getElementById('current-hand-tiles');
+    TileRenderer.renderHand(container, tiles, valueManager);
+  }
+
+  function updateHandTotal(total) {
+    const el = document.getElementById('hand-total');
+    el.textContent = total;
+    el.classList.remove('pulse');
+    requestAnimationFrame(() => el.classList.add('pulse'));
+  }
+
+  function showResultFlash(result) {
+    const el = document.getElementById('result-flash');
+    const messages = {
+      win:  '✦ CORRECT — WIN! ✦',
+      lose: '✕ WRONG — LOSE',
+      push: '◆ PUSH',
+    };
+    el.textContent = messages[result] || '';
+    el.className   = `result-flash ${result} show`;
+    setTimeout(() => el.classList.remove('show'), 2000);
+  }
+
+  function addHistory(entry, valueManager) {
+    const list = document.getElementById('history-list');
+    const el = document.createElement('div');
+    el.className = 'history-hand';
+
+    const tilesDiv = document.createElement('div');
+    tilesDiv.className = 'history-tiles';
+    TileRenderer.renderHand(tilesDiv, entry.tiles, valueManager, true);
+
+    const metaDiv = document.createElement('div');
+    metaDiv.className = 'history-meta';
+    metaDiv.innerHTML = `
+      <span class="history-total">${entry.total}</span>
+      <span class="history-result ${entry.result}">${entry.result.toUpperCase()}</span>
+    `;
+
+    el.appendChild(tilesDiv);
+    el.appendChild(metaDiv);
+    list.insertBefore(el, list.firstChild);
+
+    // Keep only last 20 entries in DOM
+    while (list.children.length > 20) list.removeChild(list.lastChild);
+  }
+
+  function clearHistory() {
+    document.getElementById('history-list').innerHTML = '';
+  }
+
+  function setBettingEnabled(enabled) {
+    document.getElementById('btn-higher').disabled = !enabled;
+    document.getElementById('btn-lower').disabled  = !enabled;
+  }
+
+  function showReshuffle(show) {
+    const el = document.getElementById('reshuffle-notice');
+    if (show) {
+      el.classList.add('show');
+      setTimeout(() => el.classList.remove('show'), 2500);
+    } else {
+      el.classList.remove('show');
+    }
+  }
+
+  function showEndScreen(state, lbResult) {
+    setText('end-score',  state.score);
+    setText('end-rounds', state.round);
+    setText('end-wins',   state.wins);
+    setText('end-streak', state.bestStreak);
+    setText('end-reason', state.overReason);
+
+    const badge = document.getElementById('end-new-record');
+    badge.style.display = (lbResult && lbResult.isTop) ? 'inline-block' : 'none';
+
+    showScreen('end');
+  }
+
+  function renderLeaderboard(containerId, entries) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+
+    if (!entries || entries.length === 0) {
+      container.innerHTML = '<div class="lb-empty">No scores yet — be the first!</div>';
+      return;
+    }
+
+    const rankClasses = ['first', 'second', 'third', '', ''];
+    const rankSymbols = ['①', '②', '③', '④', '⑤'];
+
+    entries.forEach((entry, i) => {
+      const el = document.createElement('div');
+      el.className = 'lb-entry';
+      el.style.animationDelay = `${i * 0.05}s`;
+      const date = entry.date ? new Date(entry.date).toLocaleDateString() : '—';
+      el.innerHTML = `
+        <span class="lb-rank ${rankClasses[i]}">${rankSymbols[i]}</span>
+        <span class="lb-name">${date}</span>
+        <span class="lb-score">${entry.score}</span>
+      `;
+      container.appendChild(el);
+    });
+  }
+
+  function showToast(msg, duration = 2500) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), duration);
+  }
+
+  function setText(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+  }
+
+  return {
+    showScreen, updateHUD, renderCurrentHand, updateHandTotal,
+    showResultFlash, addHistory, clearHistory, setBettingEnabled,
+    showReshuffle, showEndScreen, renderLeaderboard, showToast,
+  };
+})();
+
+
+/* ===============================================================
+   MODULE: App
+   Top-level controller — orchestrates all modules
+   =============================================================== */
+const App = (() => {
+  const engine = new GameEngine();
+  let waitingForFirstBet = true;
+
+  function startNewGame() {
+    engine.newGame();
+    waitingForFirstBet = true;
+
+    UI.clearHistory();
+    UI.showScreen('game');
+    UI.setBettingEnabled(true);
+
+    const state = engine.getState();
+    UI.updateHUD(state);
+    UI.renderCurrentHand(state.currentHand, engine.values);
+    UI.updateHandTotal(state.handTotal);
+
+    // First hand — player bets on next vs this
+    document.getElementById('bet-prompt').innerHTML =
+      'Bet if the <em>next</em> hand will be<br>higher or lower than this one';
+  }
+
+  function placeBet(direction) {
+    if (engine.isOver) return;
+    UI.setBettingEnabled(false);
+
+    // Brief delay to show current hand then transition
+    setTimeout(() => {
+      const betResult = engine.placeBet(direction);
+      if (!betResult) return;
+
+      const state = engine.getState();
+
+      // Show reshuffle notice
+      if (state.lastReshuffled) UI.showReshuffle(true);
+
+      // Show result
+      UI.showResultFlash(betResult.result);
+
+      // Update history with the PREVIOUS hand (before deal)
+      if (engine.handHistory.length > 0) {
+        UI.addHistory(engine.handHistory[0], engine.values);
+      }
+
+      // Update HUD
+      UI.updateHUD(state);
+
+      // Render new hand (if game not over)
+      if (!state.isOver) {
+        setTimeout(() => {
+          UI.renderCurrentHand(state.currentHand, engine.values);
+          UI.updateHandTotal(state.handTotal);
+          UI.setBettingEnabled(true);
+
+          document.getElementById('bet-prompt').innerHTML =
+            'Higher or lower than<br><strong>' + betResult.thisTotal + '</strong>?';
+        }, 800);
+      } else {
+        // Game over
+        setTimeout(() => endGame(state), 1200);
+      }
+    }, 200);
+  }
+
+  function endGame(state) {
+    const lbResult = Leaderboard.addScore(
+      state.score, state.wins, state.round, state.bestStreak
+    );
+    UI.showEndScreen(state, lbResult);
+  }
+
+  function exitGame() {
+    if (confirm('Exit to lobby? Your current score will not be saved.')) {
+      goHome();
+    }
+  }
+
+  function goHome() {
+    UI.showScreen('landing');
+    const top5 = Leaderboard.getTop(5);
+    UI.renderLeaderboard('leaderboard-display', top5);
+  }
+
+  function showLeaderboard() {
+    // Could expand to full leaderboard modal — for now show toast
+    UI.showToast('Top 5 scores shown below!', 1800);
+  }
+
+  // Initialize
+  (function init() {
+    const top5 = Leaderboard.getTop(5);
+    UI.renderLeaderboard('leaderboard-display', top5);
+    UI.showScreen('landing');
+  })();
+
+  return { startNewGame, placeBet, exitGame, goHome, showLeaderboard };
+})();
+</script>
+</body>
+</html>
