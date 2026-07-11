@@ -117,23 +117,7 @@ The public interface (`addScore`, `getTop`, `clearAll`) stays identical — only
 
 ---
 
-## What Was Handwritten vs AI-Assisted
 
-### Handwritten
-- Module breakdown and responsibility boundaries
-- CSS variable naming conventions
-- Game rules interpretation (dynamic scaling, reshuffle limits, push logic, scoring formula)
-- CSS aesthetic direction: felt-table theme, ornamental gold borders, 3D tile shadows
-- Animation sequencing and timing (staggered tile reveal, result flash, score pulse)
-- Architecture decisions: no build step, ES modules, swappable storage interface
-- Fisher-Yates shuffle reference implementation
-
-### AI-Assisted (Claude)
-- HTML/CSS boilerplate scaffolding
-- localStorage try/catch wrapper pattern
-- Unicode Mahjong tile character lookup
-
----
 
 
 
